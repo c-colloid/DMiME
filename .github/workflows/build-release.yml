@@ -1,0 +1,28 @@
+name: build-release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build release artifacts
+        run: python3 scripts/build_release.py --dist=dist/
+      - name: Validate plist
+        run: xmllint --noout "dist/DMiME1.1 igakujisho for icloud.plist"
+      - name: Attach artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/DMiME-1.1.txt
+            dist/DMiME1.1 igakujisho for icloud.plist
