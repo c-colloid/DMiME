@@ -17,7 +17,7 @@ jobs:
       - name: Rebuild dictionaries from src/
         run: python3 scripts/build_release.py
       - name: Validate plist
-        run: xmllint --noout "Mac/DMiME1.1 igakujisho for icloud.plist"
+        run: python3 -c "import plistlib, sys; plistlib.loads(open('Mac/DMiME1.1 igakujisho for icloud.plist', 'rb').read())"
       - name: Ensure top-level files match src/
         run: |
           if ! git diff --quiet -- WindowsIME Mac; then

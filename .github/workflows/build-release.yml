@@ -19,7 +19,7 @@ jobs:
       - name: Build release artifacts
         run: python3 scripts/build_release.py --dist=dist/
       - name: Validate plist
-        run: xmllint --noout "dist/DMiME1.1 igakujisho for icloud.plist"
+        run: python3 -c "import plistlib, sys; plistlib.loads(open('dist/DMiME1.1 igakujisho for icloud.plist', 'rb').read())"
       - name: Attach artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
