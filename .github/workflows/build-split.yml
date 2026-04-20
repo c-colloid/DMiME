@@ -1,0 +1,43 @@
+name: build-split
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Same-repo pushes auto-commit. pull_request events only run for fork PRs
+    # (same-repo PRs are already handled by the push event on their branch).
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild dictionaries from src/
+        run: python3 scripts/build_release.py
+      - name: Validate plist
+        run: python3 -c "import plistlib; plistlib.loads(open('Mac/DMiME1.1 igakujisho for icloud.plist', 'rb').read())"
+      - name: Auto-commit regenerated top-level files (same-repo branches)
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: regenerate top-level dictionaries from src/"
+          file_pattern: |
+            WindowsIME/DMiME-1.1.txt
+            Mac/DMiME1.1 igakujisho for icloud.plist
+      - name: Verify no drift (fork PRs cannot auto-commit)
+        if: github.event_name == 'pull_request'
+        run: |
+          if ! git diff --quiet -- WindowsIME Mac; then
+            echo "::error::Top-level files are out of sync with src/. Fork PRs can't be auto-committed — please run 'python3 scripts/build_release.py' locally and push the result."
+            git --no-pager diff --stat -- WindowsIME Mac
+            exit 1
+          fi

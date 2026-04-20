@@ -49,16 +49,27 @@ src/
 
 ## 追加・編集の手順
 
-1. `src/` 配下の該当バケットファイルを編集。同じバケット内は `(よみ, 語)` の辞書順にソートされている状態を保つと review しやすいですが、CI 上は順序を気にしません (build 時に自動整列)。
-2. 再ビルド:
-   ```
-   python3 scripts/build_release.py
-   ```
-3. トップレベルの 2 ファイル (`WindowsIME/DMiME-1.1.txt`, `Mac/…plist`) も含めてコミット。`.github/workflows/verify-split.yml` が PR でこれを再確認します。
+1. `src/` 配下の該当バケットファイルを編集。同じバケット内は `(よみ, 語)` の辞書順にソートされている状態を保つと review しやすいですが、厳密な順序は自動整列されるので気にしなくて OK です。
+2. 変更をコミットして push。**トップレベルの 2 ファイル (`WindowsIME/DMiME-1.1.txt`, `Mac/…plist`) を手で編集・コミットする必要はありません**。
+3. push 後、`.github/workflows/build-split.yml` が自動でトップレベル 2 ファイルを再生成してブランチに追いコミットします (数十秒〜1 分)。以降に手元を最新化するときは `git pull` を忘れずに。
+
+GitHub 上の Web エディタだけで `src/*.tsv` を編集・コミットしても、CI が残りを面倒みます。ローカル Python 環境は必須ではありません。
+
+### ローカルで動作確認したい場合 (任意)
+
+```
+python3 scripts/build_release.py
+```
+
+`src/` の内容から `WindowsIME/DMiME-1.1.txt` と `Mac/…plist` を再生成します。生成物をコミットしてもしなくても構いません (CI が同じものを再生成するため冪等)。
+
+### Fork からの PR
+
+GitHub の制約で、Fork ブランチへは CI が追いコミットできません。Fork 経由で PR を出す場合のみ、事前に `python3 scripts/build_release.py` を実行して生成物をコミットしてください (CI が未同期を検出して失敗します)。
 
 ## ビルド成果物のバイトハッシュ
 
-`python3 scripts/build_release.py` は冪等で、同じ `src/` から常に同じバイト列を生成します。CI の verify-split ジョブは「再ビルド後に `WindowsIME/DMiME-1.1.txt` と `Mac/…plist` が変化しない」ことを検査します。
+`scripts/build_release.py` は冪等で、同じ `src/` から常に同じバイト列を生成します。
 
 ## リリース
 
