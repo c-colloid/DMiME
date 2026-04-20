@@ -39,10 +39,11 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _buckets import BUCKET_ORDER  # noqa: E402
+from _buckets import BUCKET_ORDER, bucket_for  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO / "src"
+SPECIAL_SRC = SRC_DIR / "_special.tsv"
 WIN_OUT = REPO / "WindowsIME" / "DMiME.txt"
 MAC_OUT = REPO / "Mac" / "DMiME igakujisho for icloud.plist"
 
@@ -56,32 +57,56 @@ PLIST_HEADER = (
 PLIST_FOOTER = '</array>\n</plist>\n'
 
 
+def _parse_row(path: Path, raw: str) -> tuple[str, str, str, str]:
+    line = raw.rstrip("\n")
+    parts = line.split("\t")
+    if len(parts) != 4:
+        raise SystemExit(
+            f"{path}: expected 4 TSV columns, got {len(parts)}: {raw!r}"
+        )
+    yomi, phrase, platform, pos = parts
+    if platform not in ("win", "mac", "both"):
+        raise SystemExit(
+            f"{path}: unknown platform tag {platform!r} in {raw!r}"
+        )
+    return yomi, phrase, platform, pos
+
+
 def load_entries() -> list[tuple[str, str, str, str]]:
-    """Load rows in bucket order; each bucket sorted by (yomi, phrase)."""
-    rows: list[tuple[str, str, str, str]] = []
+    """Load rows in bucket order; each bucket sorted by (yomi, phrase).
+
+    `_special.tsv` holds entries with non-conversion POS (短縮よみ / 抑制単語
+    / サジェストのみ) so contributors can audit them in one place. Those rows
+    are routed back to their natural 50音 bucket at build time, keeping the
+    shipped artifact byte-identical with a layout where every entry was
+    filed under its yomi's bucket.
+    """
+    buckets: dict[str, list[tuple[str, str, str, str]]] = {
+        name: [] for name in BUCKET_ORDER
+    }
+
     for name in BUCKET_ORDER:
         path = SRC_DIR / f"{name}.tsv"
         if not path.exists():
             continue
-        bucket_rows: list[tuple[str, str, str, str]] = []
         with path.open(encoding="utf-8") as f:
             for raw in f:
-                line = raw.rstrip("\n")
-                if not line:
+                if not raw.strip():
                     continue
-                parts = line.split("\t")
-                if len(parts) != 4:
-                    raise SystemExit(
-                        f"{path}: expected 4 TSV columns, got {len(parts)}: {raw!r}"
-                    )
-                yomi, phrase, platform, pos = parts
-                if platform not in ("win", "mac", "both"):
-                    raise SystemExit(
-                        f"{path}: unknown platform tag {platform!r} in {raw!r}"
-                    )
-                bucket_rows.append((yomi, phrase, platform, pos))
-        bucket_rows.sort(key=lambda r: (r[0], r[1]))
-        rows.extend(bucket_rows)
+                buckets[name].append(_parse_row(path, raw))
+
+    if SPECIAL_SRC.exists():
+        with SPECIAL_SRC.open(encoding="utf-8") as f:
+            for raw in f:
+                if not raw.strip():
+                    continue
+                row = _parse_row(SPECIAL_SRC, raw)
+                buckets[bucket_for(row[0])].append(row)
+
+    rows: list[tuple[str, str, str, str]] = []
+    for name in BUCKET_ORDER:
+        buckets[name].sort(key=lambda r: (r[0], r[1]))
+        rows.extend(buckets[name])
     return rows
 
 
