@@ -33,11 +33,10 @@ jobs:
           file_pattern: |
             WindowsIME/DMiME-1.1.txt
             Mac/DMiME1.1 igakujisho for icloud.plist
-      - name: Verify no drift (fork PRs cannot auto-commit)
+      - name: Note drift on fork PRs (will be auto-fixed post-merge)
         if: github.event_name == 'pull_request'
         run: |
           if ! git diff --quiet -- WindowsIME Mac; then
-            echo "::error::Top-level files are out of sync with src/. Fork PRs can't be auto-committed — please run 'python3 scripts/build_release.py' locally and push the result."
+            echo "::warning::Top-level dictionaries are out of sync with src/. They will be auto-regenerated after merge. (Tip: enable Actions on your fork to regenerate automatically on push.)"
             git --no-pager diff --stat -- WindowsIME Mac
-            exit 1
           fi

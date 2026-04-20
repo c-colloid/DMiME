@@ -65,7 +65,22 @@ python3 scripts/build_release.py
 
 ### Fork からの PR
 
-GitHub の制約で、Fork ブランチへは CI が追いコミットできません。Fork 経由で PR を出す場合のみ、事前に `python3 scripts/build_release.py` を実行して生成物をコミットしてください (CI が未同期を検出して失敗します)。
+GitHub の制約で、upstream の CI は Fork ブランチにコミットできません。Fork 経由で PR を出す場合は以下のいずれかの方法で top-level ファイルが同期されます (やらなくてもマージ後に upstream 側が自動修正します)。
+
+**推奨: Fork 側で GitHub Actions を有効化する**
+
+1. 自分の Fork リポジトリ (例: `あなた/DMiME`) の **Actions** タブを開く
+2. `I understand my workflows, go ahead and enable them` ボタンを押す
+3. これ以降、Fork のブランチに push すると Fork 側で再生成が自動的に走り、top-level ファイルも一緒に追いコミットされます
+4. その状態で upstream へ PR を送れば、PR diff に src/ と top-level が揃った綺麗な状態で並びます
+
+**代替: ローカルで再ビルドしてコミット**
+
+ローカルに Python が入っていれば `python3 scripts/build_release.py` を実行して `WindowsIME/DMiME-1.1.txt` と `Mac/…plist` をコミットに含めてください。
+
+**何もしない場合**
+
+PR 時点では top-level が古いままですが、upstream の CI に黄色い ⚠ 警告が出るだけで CI は緑のまま通ります。マージ後に upstream の main で自動再生成が走り同期されます。レビュワーは src/ の diff で実質的な変更内容を確認できます。
 
 ## ビルド成果物のバイトハッシュ
 
