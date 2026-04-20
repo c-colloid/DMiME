@@ -7,24 +7,30 @@
 
 This is the only tool that turns split sources into the shipped single-file
 artifacts. It is used both locally (by contributors after editing src/) and
-by CI (verify-split, sync-topfile, build-release workflows).
+by CI (build-split and build-release workflows).
 
 Usage:
     python3 scripts/build_release.py
-    python3 scripts/build_release.py --dist=dist/
+    python3 scripts/build_release.py --dist=dist/ --version=1.2
 
-Without --dist the top-level shipped files are overwritten in-place:
-    WindowsIME/DMiME-1.1.txt
-    Mac/DMiME1.1 igakujisho for icloud.plist
+Without --dist the version-less living files are (re)written in-place:
+    WindowsIME/DMiME.txt
+    Mac/DMiME igakujisho for icloud.plist
 
-With --dist the same files are also written to the given directory, suitable
-for upload as GitHub Release assets.
+With --dist the release assets are written to the given directory. When
+--version=X.Y is also given, artifact names carry that version:
+    dist/DMiME-{version}.zip                           (contains DMiME-{version}.txt)
+    dist/DMiME-{version} igakujisho for icloud.plist
+
+When --version is omitted under --dist, the version-less names are used
+(useful for manual testing).
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -32,8 +38,8 @@ from _buckets import BUCKET_ORDER  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO / "src"
-WIN_OUT = REPO / "WindowsIME" / "DMiME-1.1.txt"
-MAC_OUT = REPO / "Mac" / "DMiME1.1 igakujisho for icloud.plist"
+WIN_OUT = REPO / "WindowsIME" / "DMiME.txt"
+MAC_OUT = REPO / "Mac" / "DMiME igakujisho for icloud.plist"
 
 PLIST_HEADER = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -107,10 +113,31 @@ def write_mac(rows: list[tuple[str, str, str, str]], path: Path) -> int:
     return written
 
 
+def build_release_assets(dist: Path, version: str | None) -> None:
+    """Produce versioned Release assets from the in-repo top-level files.
+
+    Windows is distributed as a zip to match historical v1.1 packaging;
+    Mac plist ships as-is (drag-and-drop install).
+    """
+    dist.mkdir(parents=True, exist_ok=True)
+    suffix = f"-{version}" if version else ""
+    win_txt_name = f"DMiME{suffix}.txt"
+    win_zip_path = dist / f"DMiME{suffix}.zip"
+    mac_plist_path = dist / f"DMiME{suffix} igakujisho for icloud.plist"
+
+    with zipfile.ZipFile(win_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(WIN_OUT, arcname=win_txt_name)
+    mac_plist_path.write_bytes(MAC_OUT.read_bytes())
+    print(f"wrote {win_zip_path} (contains {win_txt_name})")
+    print(f"wrote {mac_plist_path}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=None,
-                    help="also copy outputs to this directory (for Release assets)")
+                    help="write Release assets to this directory")
+    ap.add_argument("--version", default=None,
+                    help="version to embed in release asset filenames (e.g. 1.2)")
     args = ap.parse_args()
 
     rows = load_entries()
@@ -121,13 +148,7 @@ def main() -> int:
     print(f"wrote {MAC_OUT.relative_to(REPO)}: {n_mac} entries")
 
     if args.dist:
-        args.dist.mkdir(parents=True, exist_ok=True)
-        win_dist = args.dist / WIN_OUT.name
-        mac_dist = args.dist / MAC_OUT.name
-        win_dist.write_bytes(WIN_OUT.read_bytes())
-        mac_dist.write_bytes(MAC_OUT.read_bytes())
-        print(f"copied to {win_dist}")
-        print(f"copied to {mac_dist}")
+        build_release_assets(args.dist, args.version)
 
     return 0
 

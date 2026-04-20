@@ -24,15 +24,15 @@ jobs:
       - name: Rebuild dictionaries from src/
         run: python3 scripts/build_release.py
       - name: Validate plist
-        run: python3 -c "import plistlib; plistlib.loads(open('Mac/DMiME1.1 igakujisho for icloud.plist', 'rb').read())"
+        run: python3 -c "import plistlib; plistlib.loads(open('Mac/DMiME igakujisho for icloud.plist', 'rb').read())"
       - name: Auto-commit regenerated top-level files (same-repo branches)
         if: github.event_name == 'push'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: regenerate top-level dictionaries from src/"
           file_pattern: |
-            WindowsIME/DMiME-1.1.txt
-            Mac/DMiME1.1 igakujisho for icloud.plist
+            WindowsIME/DMiME.txt
+            Mac/DMiME igakujisho for icloud.plist
       - name: Note drift on fork PRs (will be auto-fixed post-merge)
         if: github.event_name == 'pull_request'
         run: |
