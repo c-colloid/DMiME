@@ -26,6 +26,17 @@ jobs:
       - name: Attach artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body: |
+            DMiME v${{ steps.version.outputs.version }}
+
+            ## アセット
+
+            - `DMiME-${{ steps.version.outputs.version }}.zip` — Google 日本語入力 (Windows/Mac/Linux)
+            - `DMiME-${{ steps.version.outputs.version }}-msime.zip` — Microsoft IME (Windows)
+            - `DMiME-${{ steps.version.outputs.version }} igakujisho for icloud.plist` — Mac ユーザ辞書 (iCloud 同期)
+
+            インストール手順は [README のインストール法](https://github.com/c-colloid/DMiME#インストール法) を参照してください。
           files: |
             dist/DMiME-${{ steps.version.outputs.version }}.zip
+            dist/DMiME-${{ steps.version.outputs.version }}-msime.zip
             dist/DMiME-${{ steps.version.outputs.version }} igakujisho for icloud.plist

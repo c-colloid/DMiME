@@ -19,8 +19,13 @@ Without --dist the version-less living files are (re)written in-place:
 
 With --dist the release assets are written to the given directory. When
 --version=X.Y is also given, artifact names carry that version:
-    dist/DMiME-{version}.zip                           (contains DMiME-{version}.txt)
-    dist/DMiME-{version} igakujisho for icloud.plist
+    dist/DMiME-{version}.zip                           (Google 日本語入力用)
+    dist/DMiME-{version}-msime.zip                     (Microsoft IME 用)
+    dist/DMiME-{version} igakujisho for icloud.plist   (Mac ユーザ辞書用)
+
+The MS IME file is UTF-16 LE with BOM + CRLF line endings and has
+Google-specific POS tags ("サジェストのみ") stripped, since MS IME has
+no equivalent concept.
 
 When --version is omitted under --dist, the version-less names are used
 (useful for manual testing).
@@ -91,6 +96,41 @@ def write_win(rows: list[tuple[str, str, str, str]], path: Path) -> int:
     return written
 
 
+# Google 日本語入力 品詞 → Microsoft IME 品詞。
+# None で落とすエントリ (MS IME に相当概念がないもの)。
+MSIME_POS_MAP: dict[str, str | None] = {
+    "名詞": "名詞",
+    "固有名詞": "固有名詞",
+    "短縮よみ": "短縮よみ",
+    "名詞サ変": "サ変名詞",
+    "抑制単語": "抑制単語",
+    "サジェストのみ": None,
+}
+
+
+def write_msime(rows: list[tuple[str, str, str, str]], path: Path) -> int:
+    """Write Microsoft IME-compatible user dictionary text.
+
+    MS IME's text import requires UTF-16 LE with BOM and CRLF line
+    endings, and accepts only its own POS vocabulary. POS tags that
+    Google 日本語入力 ships but MS IME does not (e.g. "サジェストのみ")
+    are dropped rather than forced into a non-equivalent category.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    written = 0
+    with path.open("w", encoding="utf-16-le", newline="\r\n") as f:
+        f.write("\ufeff")
+        for yomi, phrase, platform, pos in rows:
+            if platform not in ("win", "both"):
+                continue
+            mapped = MSIME_POS_MAP.get(pos)
+            if mapped is None:
+                continue
+            f.write(f"{yomi}\t{phrase}\t{mapped}\n")
+            written += 1
+    return written
+
+
 def _xml_escape(s: str) -> str:
     return (s.replace("&", "&amp;")
              .replace("<", "&lt;")
@@ -113,22 +153,35 @@ def write_mac(rows: list[tuple[str, str, str, str]], path: Path) -> int:
     return written
 
 
-def build_release_assets(dist: Path, version: str | None) -> None:
-    """Produce versioned Release assets from the in-repo top-level files.
+def build_release_assets(dist: Path, version: str | None,
+                         rows: list[tuple[str, str, str, str]]) -> None:
+    """Produce versioned Release assets.
 
-    Windows is distributed as a zip to match historical v1.1 packaging;
-    Mac plist ships as-is (drag-and-drop install).
+    Three assets are produced per release:
+      - DMiME-<ver>.zip         : Google 日本語入力用 (UTF-8, LF)
+      - DMiME-<ver>-msime.zip   : Microsoft IME 用 (UTF-16 LE BOM, CRLF)
+      - DMiME-<ver> igakujisho for icloud.plist : Mac ユーザ辞書用
     """
     dist.mkdir(parents=True, exist_ok=True)
     suffix = f"-{version}" if version else ""
-    win_txt_name = f"DMiME{suffix}.txt"
-    win_zip_path = dist / f"DMiME{suffix}.zip"
+    google_txt_name = f"DMiME{suffix}.txt"
+    google_zip_path = dist / f"DMiME{suffix}.zip"
+    msime_txt_name = f"DMiME{suffix}.txt"
+    msime_zip_path = dist / f"DMiME{suffix}-msime.zip"
+    msime_tmp = dist / f"_DMiME{suffix}-msime.txt"
     mac_plist_path = dist / f"DMiME{suffix} igakujisho for icloud.plist"
 
-    with zipfile.ZipFile(win_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-        z.write(WIN_OUT, arcname=win_txt_name)
+    with zipfile.ZipFile(google_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(WIN_OUT, arcname=google_txt_name)
+    print(f"wrote {google_zip_path} (contains {google_txt_name})")
+
+    n_ms = write_msime(rows, msime_tmp)
+    with zipfile.ZipFile(msime_zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(msime_tmp, arcname=msime_txt_name)
+    msime_tmp.unlink()
+    print(f"wrote {msime_zip_path} (contains {msime_txt_name}, {n_ms} entries)")
+
     mac_plist_path.write_bytes(MAC_OUT.read_bytes())
-    print(f"wrote {win_zip_path} (contains {win_txt_name})")
     print(f"wrote {mac_plist_path}")
 
 
@@ -148,7 +201,7 @@ def main() -> int:
     print(f"wrote {MAC_OUT.relative_to(REPO)}: {n_mac} entries")
 
     if args.dist:
-        build_release_assets(args.dist, args.version)
+        build_release_assets(args.dist, args.version, rows)
 
     return 0
 
