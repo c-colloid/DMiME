@@ -116,6 +116,18 @@ def load_entries() -> list[tuple[str, str, str, str]]:
     for name in BUCKET_ORDER:
         buckets[name].sort(key=lambda r: (r[0], r[1]))
         rows.extend(buckets[name])
+
+    seen: dict[tuple[str, str], str] = {}
+    for yomi, phrase, platform, pos in rows:
+        key = (yomi, phrase)
+        if key in seen:
+            raise SystemExit(
+                f"duplicate entry {key!r}: appears with both "
+                f"{seen[key]!r} and {pos!r} (or in multiple src files). "
+                f"Each (yomi, phrase) pair must be unique across src/."
+            )
+        seen[key] = pos
+
     return rows
 
 
