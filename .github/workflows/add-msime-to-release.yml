@@ -1,0 +1,36 @@
+name: add-msime-to-release
+
+# Builds the Microsoft IME variant of DMiME for an existing release and
+# attaches it as an asset, without touching the release's other assets.
+# Designed for the one-time case of adding MS IME support to a release
+# that was originally cut before MS IME packaging existed (e.g. v1.1).
+#
+# Trigger manually from the Actions tab → "Run workflow" → enter version.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Existing release version without v prefix (e.g. 1.1)"
+        required: true
+        default: "1.1"
+
+permissions:
+  contents: write
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build MS IME zip
+        run: python3 scripts/build_release.py --dist=dist/ --version=${{ inputs.version }}
+      - name: Attach MS IME zip to existing release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: dist/DMiME-${{ inputs.version }}-msime.zip
+          fail_on_unmatched_files: true
