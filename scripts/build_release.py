@@ -91,14 +91,14 @@ def load_entries() -> list[tuple[str, str, str, str]]:
             continue
         with path.open(encoding="utf-8") as f:
             for raw in f:
-                if not raw.strip():
+                if not raw.strip() or raw.lstrip().startswith("#"):
                     continue
                 buckets[name].append(_parse_row(path, raw))
 
     if SPECIAL_SRC.exists():
         with SPECIAL_SRC.open(encoding="utf-8") as f:
             for raw in f:
-                if not raw.strip():
+                if not raw.strip() or raw.lstrip().startswith("#"):
                     continue
                 row = _parse_row(SPECIAL_SRC, raw)
                 buckets[bucket_for(row[0])].append(row)
