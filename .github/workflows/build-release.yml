@@ -1,0 +1,42 @@
+name: build-release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Build release artifacts
+        run: python3 scripts/build_release.py --dist=dist/ --version=${{ steps.version.outputs.version }}
+      - name: Validate plist
+        run: python3 -c "import plistlib; plistlib.loads(open('dist/DMiME-${{ steps.version.outputs.version }} igakujisho for icloud.plist', 'rb').read())"
+      - name: Attach artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            DMiME v${{ steps.version.outputs.version }}
+
+            ## アセット
+
+            - `DMiME-${{ steps.version.outputs.version }}.zip` — Google 日本語入力 (Windows/Mac/Linux)
+            - `DMiME-${{ steps.version.outputs.version }}-msime.zip` — Microsoft IME (Windows)
+            - `DMiME-${{ steps.version.outputs.version }} igakujisho for icloud.plist` — Mac ユーザ辞書 (iCloud 同期)
+
+            インストール手順は [README のインストール法](https://github.com/c-colloid/DMiME#インストール法) を参照してください。
+          files: |
+            dist/DMiME-${{ steps.version.outputs.version }}.zip
+            dist/DMiME-${{ steps.version.outputs.version }}-msime.zip
+            dist/DMiME-${{ steps.version.outputs.version }} igakujisho for icloud.plist

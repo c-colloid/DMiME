@@ -1,0 +1,25 @@
+name: validate-src
+
+# Runs on every push and on PRs to confirm src/*.tsv parses correctly and
+# scripts/build_release.py can produce valid artifacts. Build outputs live
+# only in ephemeral CI workspace — they are never committed back to the
+# repository. Release assets are published separately by build-release.yml
+# when a v* tag is pushed.
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build dictionaries from src/
+        run: python3 scripts/build_release.py
+      - name: Validate plist
+        run: python3 -c "import plistlib; plistlib.loads(open('Mac/DMiME igakujisho for icloud.plist', 'rb').read())"
