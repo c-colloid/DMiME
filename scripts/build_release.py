@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# DMiME - 医学医療用語変換辞書
-# Copyright (C) 2016 Kmm, Project DMiME
-# Licensed under GPL-2.0-or-later
+# DMiME 保守用ツール
+# Copyright (C) 2026 colloid
+# Licensed under GPL-2.0-only
 
 """Build IME dictionaries (Google / MS IME / Mac) from the unified src/*.tsv.
 
