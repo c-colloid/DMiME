@@ -3,12 +3,19 @@
 # Copyright (C) 2016 Kmm, Project DMiME
 # Licensed under GPL-2.0-or-later
 
-"""One-time migration: existing Win TSV and Mac plist -> unified src/*.tsv.
+"""One-time migration: historical DMiME-1.1 single-file distributions -> unified src/*.tsv.
 
-Merges the two historical dictionary files into a single set of sources
-partitioned by 50音 bucket, annotating each entry with a platform tag
-(`win` / `mac` / `both`) and preserving part-of-speech from the Win side
-where available.
+Merges the two historical dictionary files (the Google 日本語入力-format
+TSV and the macOS plist) into a single set of sources partitioned by
+50音 bucket, annotating each entry with a platform tag (`ime` / `mac` /
+`both`) and preserving part-of-speech from the Google IME side where
+available.
+
+Historical note: the TSV file used to live at WindowsIME/DMiME-1.1.txt
+because we assumed it was a Microsoft IME file. It is actually Google
+日本語入力 format; folder/naming semantics were corrected in a later
+refactor (this migration script still points at the original location
+for reproducibility).
 
 Usage:
     python3 scripts/migrate_initial.py           # write src/*.tsv
@@ -27,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _buckets import BUCKET_ORDER, bucket_for  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
-WIN_SRC = REPO / "WindowsIME" / "DMiME-1.1.txt"
+GOOGLE_SRC_LEGACY = REPO / "WindowsIME" / "DMiME-1.1.txt"
 MAC_SRC = REPO / "Mac" / "DMiME1.1 igakujisho for icloud.plist"
 OUT_DIR = REPO / "src"
 
@@ -37,8 +44,8 @@ PLIST_ENTRY = re.compile(
 )
 
 
-def read_win(path: Path) -> dict[tuple[str, str], str]:
-    """Return {(yomi, phrase): pos} from the Windows TSV."""
+def read_google_tsv(path: Path) -> dict[tuple[str, str], str]:
+    """Return {(yomi, phrase): pos} from the Google IME-format TSV."""
     out: dict[tuple[str, str], str] = {}
     with path.open(encoding="utf-8") as f:
         for raw in f:
@@ -70,31 +77,31 @@ def main() -> int:
                     help="report stats without writing src/")
     args = ap.parse_args()
 
-    win = read_win(WIN_SRC)
+    ime = read_google_tsv(GOOGLE_SRC_LEGACY)
     mac = read_mac(MAC_SRC)
-    win_keys = set(win.keys())
+    ime_keys = set(ime.keys())
 
-    both = win_keys & mac
-    only_win = win_keys - mac
-    only_mac = mac - win_keys
+    both = ime_keys & mac
+    only_ime = ime_keys - mac
+    only_mac = mac - ime_keys
 
-    print(f"Win entries: {len(win_keys)}")
+    print(f"IME-side entries: {len(ime_keys)}")
     print(f"Mac entries: {len(mac)} (unique)")
     print(f"  both: {len(both)}")
-    print(f"  win-only: {len(only_win)}")
+    print(f"  ime-only: {len(only_ime)}")
     print(f"  mac-only: {len(only_mac)}")
 
     buckets: dict[str, list[tuple[str, str, str, str]]] = defaultdict(list)
 
-    for key in win_keys | mac:
+    for key in ime_keys | mac:
         yomi, phrase = key
         if key in both:
             platform = "both"
-        elif key in only_win:
-            platform = "win"
+        elif key in only_ime:
+            platform = "ime"
         else:
             platform = "mac"
-        pos = win.get(key, "名詞")
+        pos = ime.get(key, "名詞")
         buckets[bucket_for(yomi)].append((yomi, phrase, platform, pos))
 
     for name in BUCKET_ORDER:

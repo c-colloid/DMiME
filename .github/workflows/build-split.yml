@@ -31,12 +31,13 @@ jobs:
         with:
           commit_message: "chore: regenerate top-level dictionaries from src/"
           file_pattern: |
+            GoogleIME/DMiME.txt
             WindowsIME/DMiME.txt
             Mac/DMiME igakujisho for icloud.plist
       - name: Note drift on fork PRs (will be auto-fixed post-merge)
         if: github.event_name == 'pull_request'
         run: |
-          if ! git diff --quiet -- WindowsIME Mac; then
+          if ! git diff --quiet -- GoogleIME WindowsIME Mac; then
             echo "::warning::Top-level dictionaries are out of sync with src/. They will be auto-regenerated after merge. (Tip: enable Actions on your fork to regenerate automatically on push.)"
-            git --no-pager diff --stat -- WindowsIME Mac
+            git --no-pager diff --stat -- GoogleIME WindowsIME Mac
           fi
