@@ -1,6 +1,6 @@
 # DMiME 保守用ツール
 # Copyright (C) 2026 colloid
-# Licensed under GPL-2.0-only
+# Licensed under GPL-2.0-or-later
 
 """Bucket resolver: maps a yomi's leading character to one of 16 bucket names.
 

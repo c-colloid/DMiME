@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # DMiME 保守用ツール
 # Copyright (C) 2026 colloid
-# Licensed under GPL-2.0-only
+# Licensed under GPL-2.0-or-later
 
 """Build IME dictionaries (Google / MS IME / Mac) from the unified src/*.tsv.
 
