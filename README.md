@@ -53,7 +53,11 @@ Twitter:DMiMEjp
 当辞書使用において起きたすべてのことに対して責任を負いません。
 
 ## 著作権表示
-Copyright (C) 2016 Kmm, Project DMiME
+
+Copyright (C) 2016 Kmm, Project DMiME (原作)  
+Copyright (C) 2026- colloid (本レポジトリでの自主保守・再配布)
+
+本レポジトリは原作者 Kmm による更新が停止していることを受け、colloid が GPL-2.0 の下で自主的に保守・再配布している派生版です。原典である ORCA「かな漢字変換用医療辞書 Ver.0.3」の著作権は日本医師会ORCA管理機構に帰属します。
 
 ## ライセンス
 GPL2(GNU General Public License ver.2)
