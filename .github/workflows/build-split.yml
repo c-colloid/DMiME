@@ -1,43 +1,25 @@
-name: build-split
+name: validate-src
+
+# Runs on every push and on PRs to confirm src/*.tsv parses correctly and
+# scripts/build_release.py can produce valid artifacts. Build outputs live
+# only in ephemeral CI workspace — they are never committed back to the
+# repository. Release assets are published separately by build-release.yml
+# when a v* tag is pushed.
 
 on:
   push:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: write
-
 jobs:
-  build:
-    # Same-repo pushes auto-commit. pull_request events only run for fork PRs
-    # (same-repo PRs are already handled by the push event on their branch).
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Rebuild dictionaries from src/
+      - name: Build dictionaries from src/
         run: python3 scripts/build_release.py
       - name: Validate plist
         run: python3 -c "import plistlib; plistlib.loads(open('Mac/DMiME igakujisho for icloud.plist', 'rb').read())"
-      - name: Auto-commit regenerated top-level files (same-repo branches)
-        if: github.event_name == 'push'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: regenerate top-level dictionaries from src/"
-          file_pattern: |
-            GoogleIME/DMiME.txt
-            WindowsIME/DMiME.txt
-            Mac/DMiME igakujisho for icloud.plist
-      - name: Note drift on fork PRs (will be auto-fixed post-merge)
-        if: github.event_name == 'pull_request'
-        run: |
-          if ! git diff --quiet -- GoogleIME WindowsIME Mac; then
-            echo "::warning::Top-level dictionaries are out of sync with src/. They will be auto-regenerated after merge. (Tip: enable Actions on your fork to regenerate automatically on push.)"
-            git --no-pager diff --stat -- GoogleIME WindowsIME Mac
-          fi

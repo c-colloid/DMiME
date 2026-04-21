@@ -1,3 +1,13 @@
 __pycache__/
 *.pyc
+
+# Release-time build output (not checked in; produced on demand by
+# scripts/build_release.py --dist=…).
 dist/
+
+# Living build artifacts (not checked in; produced on demand by
+# scripts/build_release.py from src/*.tsv). Distribution happens via
+# GitHub Releases, see README.
+GoogleIME/
+WindowsIME/
+Mac/

@@ -5,15 +5,23 @@
 
 """Build IME dictionaries (Google / MS IME / Mac) from the unified src/*.tsv.
 
-This is the only tool that turns split sources into the shipped single-file
-artifacts. It is used both locally (by contributors after editing src/) and
-by CI (build-split and build-release workflows).
+`src/*.tsv` is the only source of truth for the dictionary. This script
+materialises the shipped single-file formats on demand — it is invoked
+locally by contributors who want to inspect or test output, and by
+build-release.yml when a v* tag is pushed.
+
+The build outputs are **not checked into git** (see .gitignore). They
+are generated fresh each time and distributed exclusively through
+GitHub Releases; avoiding committed build artifacts eliminates the
+possibility of accidentally editing a generated file and having the
+edit silently overwritten by CI.
 
 Usage:
     python3 scripts/build_release.py
     python3 scripts/build_release.py --dist=dist/ --version=1.2
 
-Without --dist the version-less living files are (re)written in-place:
+Without --dist the version-less living files are written to the
+working tree (git-ignored):
     GoogleIME/DMiME.txt      Google 日本語入力 format (UTF-8, LF)
     WindowsIME/DMiME.txt     Microsoft IME format (UTF-16 LE BOM, CRLF)
     Mac/DMiME igakujisho for icloud.plist
